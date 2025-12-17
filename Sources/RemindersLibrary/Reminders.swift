@@ -40,7 +40,6 @@ public enum Priority: String, ExpressibleByArgument {
     case low
     case medium
     case high
-    case urgent
 
     var intValue: Int {
         switch self {
@@ -48,7 +47,6 @@ public enum Priority: String, ExpressibleByArgument {
             case .low: return Int(EKReminderPriority.low.rawValue)
             case .medium: return Int(EKReminderPriority.medium.rawValue)
             case .high: return Int(EKReminderPriority.high.rawValue)
-            case .urgent: return 1  // Highest priority (1-4 are "high", 1 is highest)
         }
     }
 
@@ -66,8 +64,7 @@ public enum Priority: String, ExpressibleByArgument {
     init?(fromInt priority: Int) {
         switch priority {
             case 0: return nil
-            case 1: self = .urgent
-            case 2...4: self = .high
+            case 1...4: self = .high
             case 5: self = .medium
             case 6...9: self = .low
             default: return nil

@@ -42,7 +42,7 @@ Defines commands using Swift ArgumentParser:
 
 ### Reminders.swift
 Core EventKit operations:
-- `Priority` enum maps to EKReminderPriority values (none/low/medium/high/urgent)
+- `Priority` enum maps to EKReminderPriority values (none/low/medium/high)
 - `addReminder()` - Creates new reminder with all properties
 - `edit()` - Updates existing reminder properties
 - `setComplete()` - Marks reminders done/undone
@@ -50,8 +50,7 @@ Core EventKit operations:
 
 ### Priority Mapping
 ```
-urgent = 1 (highest)
-high   = 2-4 (EKReminderPriority.high)
+high   = 1-4 (EKReminderPriority.high)
 medium = 5   (EKReminderPriority.medium)
 low    = 6-9 (EKReminderPriority.low)
 none   = 0
@@ -64,9 +63,8 @@ The NaturalLanguageTests have 3 known failures due to DateComponents comparison 
 ## Fork Changes (from keith/reminders-cli)
 
 1. Added `--due-date` and `--priority` options to `edit` command
-2. Added `urgent` priority level (priority 1, highest)
-3. Updated Priority enum to use `intValue` for proper int mapping
-4. Updated display to show "urgent" for priority 1 reminders
+2. Updated Priority enum to use `intValue` for proper int mapping
+3. Updated display to use `fromInt` initializer for accurate priority display
 
 ## Homebrew Distribution
 

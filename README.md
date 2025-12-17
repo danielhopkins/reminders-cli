@@ -4,7 +4,6 @@ A simple CLI for interacting with macOS Reminders.
 
 > **Note:** This is a fork of [keith/reminders-cli](https://github.com/keith/reminders-cli) with additional features:
 > - Edit due dates and priorities on existing reminders
-> - New `urgent` priority level (highest priority)
 
 ## Usage
 
@@ -50,13 +49,11 @@ $ reminders show Soon
 $ reminders add Soon Contribute to open source
 $ reminders add Soon Go to the grocery store --due-date "tomorrow 9am"
 $ reminders add Soon Something really important --priority high
-$ reminders add Soon Drop everything --priority urgent
 $ reminders show Soon
 0: Ship reminders-cli
 1: Contribute to open source
 2: Go to the grocery store (in 10 hours)
 3: Something really important (priority: high)
-4: Drop everything (priority: urgent)
 ```
 
 #### Edit an item on a list
@@ -80,10 +77,10 @@ $ reminders show Soon
 Edit the priority:
 
 ```
-$ reminders edit Soon 0 --priority urgent
+$ reminders edit Soon 0 --priority high
 Updated reminder 'Some edited text'
 $ reminders show Soon
-0: Some edited text (in 10 hours) (priority: urgent)
+0: Some edited text (in 10 hours) (priority: high)
 ```
 
 Edit notes:
@@ -129,10 +126,9 @@ The following priority levels are available (from highest to lowest):
 
 | Priority | Description |
 |----------|-------------|
-| `urgent` | Highest priority (priority 1) |
-| `high`   | High priority (priority 2-4) |
-| `medium` | Medium priority (priority 5) |
-| `low`    | Low priority (priority 6-9) |
+| `high`   | High priority |
+| `medium` | Medium priority |
+| `low`    | Low priority |
 | `none`   | No priority (default) |
 
 #### See help for more examples
