@@ -18,7 +18,7 @@ private extension EKReminder {
 
 private func format(_ reminder: EKReminder, at index: Int?, listName: String? = nil) -> String {
     let dateString = formattedDueDate(from: reminder).map { " (\($0))" } ?? ""
-    let priorityString = Priority(reminder.mappedPriority).map { " (priority: \($0))" } ?? ""
+    let priorityString = Priority(fromInt: reminder.priority).map { " (priority: \($0))" } ?? ""
     let listString = listName.map { "\($0): " } ?? ""
     let notesString = reminder.notes.map { " (\($0))" } ?? ""
     let indexString = index.map { "\($0): " } ?? ""
@@ -40,13 +40,15 @@ public enum Priority: String, ExpressibleByArgument {
     case low
     case medium
     case high
+    case urgent
 
-    var value: EKReminderPriority {
+    var intValue: Int {
         switch self {
-            case .none: return .none
-            case .low: return .low
-            case .medium: return .medium
-            case .high: return .high
+            case .none: return 0
+            case .low: return Int(EKReminderPriority.low.rawValue)
+            case .medium: return Int(EKReminderPriority.medium.rawValue)
+            case .high: return Int(EKReminderPriority.high.rawValue)
+            case .urgent: return 1  // Highest priority (1-4 are "high", 1 is highest)
         }
     }
 
@@ -58,6 +60,17 @@ public enum Priority: String, ExpressibleByArgument {
             case .high: self = .high
         @unknown default:
             return nil
+        }
+    }
+
+    init?(fromInt priority: Int) {
+        switch priority {
+            case 0: return nil
+            case 1: self = .urgent
+            case 2...4: self = .high
+            case 5: self = .medium
+            case 6...9: self = .low
+            default: return nil
         }
     }
 }
@@ -230,7 +243,7 @@ public final class Reminders {
         }
     }
 
-    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?) {
+    func edit(itemAtIndex index: String, onListNamed name: String, newText: String?, newNotes: String?, newDueDate: DateComponents?, newPriority: Priority? = nil) {
         let calendar = self.calendar(withName: name)
         let semaphore = DispatchSemaphore(value: 0)
 
@@ -243,6 +256,12 @@ public final class Reminders {
             do {
                 reminder.title = newText ?? reminder.title
                 reminder.notes = newNotes ?? reminder.notes
+                if let dueDate = newDueDate {
+                    reminder.dueDateComponents = dueDate
+                }
+                if let priority = newPriority {
+                    reminder.priority = priority.intValue
+                }
                 try Store.save(reminder, commit: true)
                 print("Updated reminder '\(reminder.title!)'")
             } catch let error {
@@ -322,7 +341,7 @@ public final class Reminders {
         reminder.title = string
         reminder.notes = notes
         reminder.dueDateComponents = dueDateComponents
-        reminder.priority = Int(priority.value.rawValue)
+        reminder.priority = priority.intValue
         if let dueDate = dueDateComponents?.date, dueDateComponents?.hour != nil {
             reminder.addAlarm(EKAlarm(absoluteDate: dueDate))
         }
