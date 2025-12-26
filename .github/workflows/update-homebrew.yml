@@ -4,7 +4,30 @@ on:
     types: [published]
 
 jobs:
-  update:
+  build-and-release:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
+      - name: Build release binary
+        run: swift build -c release
+
+      - name: Create tarball
+        run: |
+          cd .build/release
+          tar -czvf reminders.tar.gz reminders
+          mv reminders.tar.gz ../..
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: reminders.tar.gz
+
+  update-formula:
+    needs: build-and-release
     runs-on: ubuntu-latest
     steps:
       - name: Update formula
@@ -12,5 +35,6 @@ jobs:
         with:
           formula-name: reminders-cli
           homebrew-tap: danielhopkins/homebrew-formulae
+          download-url: https://github.com/danielhopkins/reminders-cli/releases/download/${{ github.ref_name }}/reminders.tar.gz
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
