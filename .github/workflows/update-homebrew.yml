@@ -16,10 +16,7 @@ jobs:
         run: swift build -c release
 
       - name: Create tarball
-        run: |
-          cd .build/release
-          tar -czvf reminders.tar.gz reminders
-          mv reminders.tar.gz ../..
+        run: tar -czvf reminders.tar.gz -C .build/release reminders
 
       - name: Upload binary to release
         uses: softprops/action-gh-release@v2
