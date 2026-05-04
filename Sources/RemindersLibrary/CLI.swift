@@ -144,6 +144,26 @@ private struct Add: ParsableCommand {
     var priority: Priority = .none
 
     @Option(
+        name: [.customShort("r"), .customLong("repeat")],
+        help: "Recurrence frequency: none/daily/weekly/monthly/yearly")
+    var repeatFrequency: RepeatFrequency = .none
+
+    @Option(
+        name: .customLong("repeat-interval"),
+        help: "Recurrence interval (every N units), default 1")
+    var repeatInterval: Int?
+
+    @Option(
+        name: .customLong("repeat-until"),
+        help: "End the recurrence on this date")
+    var repeatUntil: DateComponents?
+
+    @Option(
+        name: .customLong("repeat-count"),
+        help: "End the recurrence after this many occurrences")
+    var repeatCount: Int?
+
+    @Option(
         name: .shortAndLong,
         help: "format, either of 'plain' or 'json'")
     var format: OutputFormat = .plain
@@ -153,6 +173,14 @@ private struct Add: ParsableCommand {
         help: "The notes to add to the reminder")
     var notes: String?
 
+    func validate() throws {
+        try validateRecurrenceFlags(
+            frequency: repeatFrequency,
+            interval: repeatInterval,
+            until: repeatUntil,
+            count: repeatCount)
+    }
+
     func run() {
         reminders.addReminder(
             string: self.reminder.joined(separator: " "),
@@ -160,6 +188,11 @@ private struct Add: ParsableCommand {
             toListNamed: self.listName,
             dueDateComponents: self.dueDate,
             priority: priority,
+            recurrence: makeRecurrenceConfig(
+                frequency: repeatFrequency,
+                interval: repeatInterval,
+                until: repeatUntil,
+                count: repeatCount),
             outputFormat: format)
     }
 }
@@ -224,6 +257,41 @@ func listNameCompletion(_ arguments: [String]) -> [String] {
     return reminders.getListNames().map { $0.replacingOccurrences(of: ":", with: "\\:") }
 }
 
+private func validateRecurrenceFlags(
+    frequency: RepeatFrequency?,
+    interval: Int?,
+    until: DateComponents?,
+    count: Int?
+) throws {
+    let hasRecurrence = frequency != nil && frequency != RepeatFrequency.none
+    if !hasRecurrence && (interval != nil || until != nil || count != nil) {
+        throw ValidationError("--repeat-interval, --repeat-until, and --repeat-count require --repeat with a frequency (daily/weekly/monthly/yearly)")
+    }
+    if until != nil && count != nil {
+        throw ValidationError("--repeat-until and --repeat-count are mutually exclusive")
+    }
+    if let interval, interval < 1 {
+        throw ValidationError("--repeat-interval must be >= 1")
+    }
+    if let count, count < 1 {
+        throw ValidationError("--repeat-count must be >= 1")
+    }
+}
+
+private func makeRecurrenceConfig(
+    frequency: RepeatFrequency,
+    interval: Int?,
+    until: DateComponents?,
+    count: Int?
+) -> RecurrenceConfig {
+    return RecurrenceConfig(
+        frequency: frequency,
+        interval: interval ?? 1,
+        endDate: until,
+        occurrences: count
+    )
+}
+
 private struct Edit: ParsableCommand {
     static let configuration = CommandConfiguration(
         abstract: "Edit the text of a reminder")
@@ -252,15 +320,49 @@ private struct Edit: ParsableCommand {
         help: "The priority of the reminder")
     var priority: Priority?
 
+    @Option(
+        name: [.customShort("r"), .customLong("repeat")],
+        help: "Recurrence frequency: none/daily/weekly/monthly/yearly. 'none' clears existing recurrence.")
+    var repeatFrequency: RepeatFrequency?
+
+    @Option(
+        name: .customLong("repeat-interval"),
+        help: "Recurrence interval (every N units), default 1")
+    var repeatInterval: Int?
+
+    @Option(
+        name: .customLong("repeat-until"),
+        help: "End the recurrence on this date")
+    var repeatUntil: DateComponents?
+
+    @Option(
+        name: .customLong("repeat-count"),
+        help: "End the recurrence after this many occurrences")
+    var repeatCount: Int?
+
     @Argument(
         parsing: .remaining,
         help: "The new reminder contents")
     var reminder: [String] = []
 
     func validate() throws {
-        if self.reminder.isEmpty && self.notes == nil && self.dueDate == nil && self.priority == nil {
-            throw ValidationError("Must specify either new reminder content, new notes, new due date, or new priority")
+        if self.reminder.isEmpty
+            && self.notes == nil
+            && self.dueDate == nil
+            && self.priority == nil
+            && self.repeatFrequency == nil
+            && self.repeatInterval == nil
+            && self.repeatUntil == nil
+            && self.repeatCount == nil
+        {
+            throw ValidationError("Must specify either new reminder content, new notes, new due date, new priority, or new recurrence")
         }
+
+        try validateRecurrenceFlags(
+            frequency: repeatFrequency,
+            interval: repeatInterval,
+            until: repeatUntil,
+            count: repeatCount)
     }
 
     func run() {
@@ -271,7 +373,14 @@ private struct Edit: ParsableCommand {
             newText: newText.isEmpty ? nil : newText,
             newNotes: self.notes,
             newDueDate: self.dueDate,
-            newPriority: self.priority
+            newPriority: self.priority,
+            newRecurrence: repeatFrequency.flatMap { freq in
+                makeRecurrenceConfig(
+                    frequency: freq,
+                    interval: repeatInterval,
+                    until: repeatUntil,
+                    count: repeatCount)
+            }
         )
     }
 }
@@ -299,7 +408,7 @@ public struct CLI: ParsableCommand {
     public static let configuration = CommandConfiguration(
         commandName: "reminders",
         abstract: "Interact with macOS Reminders from the command line",
-        version: "2.6.4",
+        version: "2.7.0",
         subcommands: [
             Add.self,
             Complete.self,

@@ -16,6 +16,7 @@ extension EKReminder: @retroactive Encodable {
         case startDate
         case dueDate
         case list
+        case recurrence
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -26,7 +27,7 @@ extension EKReminder: @retroactive Encodable {
         try container.encode(self.priority, forKey: .priority)
         try container.encode(self.calendar.title, forKey: .list)
         try container.encodeIfPresent(self.notes, forKey: .notes)
-        
+
         // url field is nil
         // https://developer.apple.com/forums/thread/128140
         try container.encodeIfPresent(self.url, forKey: .url)
@@ -50,21 +51,58 @@ extension EKReminder: @retroactive Encodable {
         if let dueDateComponents = self.dueDateComponents {
             try container.encodeIfPresent(format(dueDateComponents.date), forKey: .dueDate)
         }
-        
+
         if let lastModifiedDate = self.lastModifiedDate {
             try container.encode(format(lastModifiedDate), forKey: .lastModified)
         }
-        
+
         if let creationDate = self.creationDate {
             try container.encode(format(creationDate), forKey: .creationDate)
         }
+
+        // EventKit allows multiple recurrence rules; the CLI only writes one, so we surface the first.
+        if let rule = self.recurrenceRules?.first {
+            try container.encode(EncodedRecurrence(rule: rule), forKey: .recurrence)
+        }
     }
-    
+
     private func format(_ date: Date?) -> String? {
         if #available(macOS 12.0, *) {
             return date?.ISO8601Format()
         } else {
             return date?.description(with: .current)
+        }
+    }
+}
+
+private struct EncodedRecurrence: Encodable {
+    let frequency: String
+    let interval: Int
+    let endDate: String?
+    let occurrences: Int?
+
+    init(rule: EKRecurrenceRule) {
+        switch rule.frequency {
+        case .daily:   self.frequency = "daily"
+        case .weekly:  self.frequency = "weekly"
+        case .monthly: self.frequency = "monthly"
+        case .yearly:  self.frequency = "yearly"
+        @unknown default: self.frequency = "unknown"
+        }
+        self.interval = rule.interval
+        if let endDate = rule.recurrenceEnd?.endDate {
+            if #available(macOS 12.0, *) {
+                self.endDate = endDate.ISO8601Format()
+            } else {
+                self.endDate = endDate.description(with: .current)
+            }
+        } else {
+            self.endDate = nil
+        }
+        if let end = rule.recurrenceEnd, end.endDate == nil {
+            self.occurrences = end.occurrenceCount
+        } else {
+            self.occurrences = nil
         }
     }
 }
